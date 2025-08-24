@@ -3,7 +3,7 @@
 import json
 import os
 import sys
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Depends
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
@@ -17,6 +17,7 @@ load_dotenv()
 try:
     from src.utils.logger import log
     from src.handlers.workflow_handler import handle_workflow_request
+    from src.api.chat_request_model import ChatRequest
 
     app = FastAPI(title="Position FAQ API")
 
@@ -33,7 +34,7 @@ try:
 
     @app.get("/")
     async def root():
-        return {"message": "Welcome to Position FAQ API. Use /workflow or /contact endpoints."}
+        return {"message": "Welcome to Position FAQ API. Use /v1/chatRequest endpoint."}
 
     @app.post("/workflow")
     async def invoke_workflow(request: Request):
@@ -52,6 +53,26 @@ try:
                 )
         except Exception as e:
             log.exception("Unhandled exception in workflow endpoint: %s", str(e))
+            return JSONResponse(
+                status_code=500, 
+                content={"error": "An unexpected error occurred. Please try again later."}
+            )
+        
+    @app.post("/v1/chatRequest")
+    async def chat_request(chat_request: ChatRequest):
+        log.info(f"Received chat request for position ID: {chat_request.positionId}")
+        try:
+            result = handle_workflow_request(chat_request.question, chat_request.positionId)
+            
+            if result["success"]:
+                return {"response": result["response"]}
+            else:
+                return JSONResponse(
+                    status_code=400 if "validation" in result.get("error", "").lower() else 500,
+                    content={"error": result["error"]}
+                )
+        except Exception as e:
+            log.exception("Unhandled exception in chat request endpoint: %s", str(e))
             return JSONResponse(
                 status_code=500, 
                 content={"error": "An unexpected error occurred. Please try again later."}

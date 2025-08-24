@@ -1,6 +1,8 @@
 from src.llms.llm import llm
 from src.utils.logger import log
-from typing import Dict, Any, Literal
+from src.utils.data_loader import load_position_data
+from typing import Dict, Any, Literal, Optional
+import json
 
 def identify_question_type(input_text: str) -> Dict[str, Any]:
     """
@@ -123,9 +125,121 @@ def fetch_company_data(input_text: str) -> str:
         log.error(f"Error fetching company data: {str(e)}")
         return "I'm sorry, I couldn't retrieve information about this company at the moment."
 
-def process_input(input_text: str) -> Dict[str, Any]:
+def process_question_with_llm(question: str, position_data: Dict[str, Any]) -> str:
+    """
+    Process a question using the LLM with position data.
+    
+    Args:
+        question: The question from the user
+        position_data: The position data from the database
+        
+    Returns:
+        The response from the LLM
+    """
+    log.info("Processing question with LLM")
+    
+    # Format the position data for the prompt
+    position_info = position_data.get("position", {})
+    position_faqs = position_data.get("positionFAQs", [])
+    position_details = position_data.get("positionInfo", [])
+    company_faqs = position_data.get("companyFAQs", [])
+    company_info = position_data.get("companyInfo", [])
+    
+    # Create a formatted string of the data for the prompt
+    position_data_str = f"""
+    POSITION DESCRIPTION:
+    {position_info.get('positionDescription', 'No description available')}
+    
+    POSITION FAQs:
+    {json.dumps(position_faqs, indent=2)}
+    
+    POSITION INFO:
+    {json.dumps(position_details, indent=2)}
+    
+    COMPANY FAQs:
+    {json.dumps(company_faqs, indent=2)}
+    
+    COMPANY INFO:
+    {json.dumps(company_info, indent=2)}
+    """
+    
+    # Create the prompt for the LLM
+    prompt = f"""
+    You are an AI assistant that helps answer questions about job positions. 
+    You have been provided with the following information about a position:
+    
+    {position_data_str}
+    
+    A user has asked the following question: "{question}"
+    
+    Please follow these steps:
+    
+    1. Ensure that the user's input is a question. If it's not a question, politely ask them to rephrase as a question.
+    
+    2. Identify if the question is about the company or the position.
+    
+    3. Use the position or company information provided above to answer the question, or state that there is no answer available in the provided information.
+    
+    4. If there is no answer to the question within the provided information, but the question is very similar to one of the FAQs that has "response": null and "generatedByUser": true, then respond with: "This question has been passed to the hiring manager."
+    
+    5. If there is no answer to the question within the provided information and the question is not very similar to any existing FAQ question, respond with: "This question has been added to the question list for the Hiring Manager."
+    
+    6. If there is an answer to the question within the provided information, provide an appropriate and concise answer.
+    
+    Respond with ONLY the final answer, without explaining your reasoning or listing the steps you followed.
+    """
+    
+    try:
+        response = llm.invoke(prompt)
+        return response.content.strip()
+    except Exception as e:
+        log.error(f"Error processing question with LLM: {str(e)}")
+        return "I'm sorry, I couldn't process your question at the moment. Please try again later."
+
+def process_input(input_text: str, position_id: Optional[int] = None) -> Dict[str, Any]:
     """
     Main workflow function that processes the input and returns the appropriate response.
+    
+    Args:
+        input_text: The question from the user
+        position_id: The ID of the position
+        
+    Returns:
+        A dictionary with the response and success status
+    """
+    log.info(f"Processing input for position ID {position_id}: {input_text}")
+    
+    try:
+        # If no position ID is provided, use the old workflow
+        if position_id is None:
+            return process_legacy_input(input_text)
+            
+        # Step 1: Retrieve data for the position
+        position_data = load_position_data(position_id)
+        if position_data is None:
+            return {
+                "success": False,
+                "error": f"Position with ID {position_id} not found"
+            }
+            
+        # Step 2: Process the question using the LLM
+        response_content = process_question_with_llm(input_text, position_data)
+        
+        return {
+            "success": True,
+            "response": response_content
+        }
+            
+    except Exception as e:
+        log.error(f"Error in workflow processing: {str(e)}")
+        return {
+            "success": False,
+            "error": "An unexpected error occurred while processing your request. Please try again later."
+        }
+        
+def process_legacy_input(input_text: str) -> Dict[str, Any]:
+    """
+    Legacy workflow function that processes the input without position data.
     
     Args:
         input_text: The input text from the user
@@ -133,7 +247,7 @@ def process_input(input_text: str) -> Dict[str, Any]:
     Returns:
         A dictionary with the response and success status
     """
-    log.info(f"Processing input: {input_text}")
+    log.info(f"Processing legacy input: {input_text}")
     
     try:
         # Step 1: Identify the question type
@@ -167,7 +281,7 @@ def process_input(input_text: str) -> Dict[str, Any]:
             }
             
     except Exception as e:
-        log.error(f"Error in workflow processing: {str(e)}")
+        log.error(f"Error in legacy workflow processing: {str(e)}")
         return {
             "success": False,
             "error": "An unexpected error occurred while processing your request. Please try again later."
