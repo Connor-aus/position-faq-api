@@ -1,0 +1,69 @@
+{
+    "companyFAQs": [
+      {
+        "id": 70001,
+        "companyId": 2001,
+        "generatedByUser": false,
+        "answeredByHR": true,
+        "timesAsked": 1,
+        "question": "Probation period",
+        "answer": "Standard 6 months with mid-point review.",
+        "version": 1,
+        "timestamp": "2025-08-24T10:20:00+10:00"
+      },
+      {
+        "id": 70002,
+        "companyId": 2001,
+        "generatedByUser": true,
+        "answeredByHR": false,
+        "timesAsked": 1,
+        "question": "Visa sponsorship",
+        "answer": null,
+        "version": 1,
+        "timestamp": "2025-08-24T12:48:00+10:00"
+      },
+      {
+        "id": 70003,
+        "companyId": 2001,
+        "generatedByUser": false,
+        "answeredByHR": true,
+        "timesAsked": 1,
+        "question": "Equipment provided",
+        "answer": "MacBook Pro + 2 external monitors. BYO peripherals optional.",
+        "version": 2,
+        "timestamp": "2025-08-24T13:40:00+10:00"
+      }
+    ],
+    "companyInfo": [
+      {
+        "id": 80001,
+        "companyId": 2001,
+        "generatedByUser": false,
+        "answeredByHR": true,
+        "subject": "Working hours",
+        "answer": "Core hours 10am–4pm. Flex outside core hours permitted.",
+        "version": 1,
+        "timestamp": "2025-08-24T10:05:00+10:00"
+      },
+      {
+        "id": 80002,
+        "companyId": 2001,
+        "generatedByUser": false,
+        "answeredByHR": true,
+        "subject": "Benefits",
+        "answer": "L&D stipend $500/quarter, 18 weeks paid parental leave, EAP, home office budget.",
+        "version": 1,
+        "timestamp": "2025-08-24T10:07:00+10:00"
+      },
+      {
+        "id": 80003,
+        "companyId": 2001,
+        "generatedByUser": true,
+        "answeredByHR": false,
+        "subject": "Company-wide bonus policy",
+        "answer": null,
+        "version": 1,
+        "timestamp": "2025-08-24T14:22:00+10:00"
+      }
+    ]
+  }

@@ -3,7 +3,7 @@
       "id": 1001,
       "companyId": 2001,
       "positionDescription": "Senior Full Stack Engineer (Payments). Brisbane (Hybrid). Own key features across React + Node/AWS stack. Collaborate with Product and Design. On-call rotation optional.",
-      "version": 3,
+      "version": 1,
       "timestamp": "2025-08-24T15:05:00+10:00"
     },
     "positionFAQs": [
@@ -12,6 +12,7 @@
         "positionId": 1001,
         "generatedByUser": false,
         "answeredByHR": true,
+        "timesAsked": 1,
         "question": "Is this role hybrid or fully on-site?",
         "response": "Hybrid: 2 days in-office (Tue/Thu), flexible start 7–10am.",
         "version": 1,
@@ -22,6 +23,7 @@
         "positionId": 1001,
         "generatedByUser": true,
         "answeredByHR": false,
+        "timesAsked": 1,
         "question": "Is parking provided for this role’s office?",
         "response": null,
         "version": 1,
@@ -32,6 +34,7 @@
         "positionId": 1001,
         "generatedByUser": true,
         "answeredByHR": true,
+        "timesAsked": 1,
         "question": "What does the interview process look like?",
         "response": "30-min recruiter screen → 60-min tech interview → 60-min system design → final values interview.",
         "version": 2,
@@ -42,6 +45,7 @@
         "positionId": 1001,
         "generatedByUser": true,
         "answeredByHR": false,
+        "timesAsked": 1,
         "question": "Do you offer a relocation allowance?",
         "response": null,
         "version": 1,
@@ -78,70 +82,26 @@
         "answer": null,
         "version": 1,
         "timestamp": "2025-08-24T13:05:00+10:00"
-      }
-    ],
-    "companyFAQs": [
+      },
       {
-        "id": 70001,
+        "id": 60002,
         "positionId": 1001,
         "generatedByUser": false,
         "answeredByHR": true,
-        "subject": "Probation period",
-        "answer": "Standard 6 months with mid-point review.",
-        "version": 1,
-        "timestamp": "2025-08-24T10:20:00+10:00"
-      },
-      {
-        "id": 70002,
-        "positionId": 1001,
-        "generatedByUser": true,
-        "answeredByHR": false,
-        "subject": "Visa sponsorship",
-        "answer": null,
-        "version": 1,
-        "timestamp": "2025-08-24T12:48:00+10:00"
-      },
-      {
-        "id": 70003,
-        "positionId": 1001,
-        "generatedByUser": false,
-        "answeredByHR": true,
-        "subject": "Equipment provided",
-        "answer": "MacBook Pro + 2 external monitors. BYO peripherals optional.",
+        "subject": "Tech stack",
+        "answer": "React, JavaScript, Node.js, AWS (Lambda, API Gateway, DynamoDB), Terraform, GitHub Actions.",
         "version": 2,
-        "timestamp": "2025-08-24T13:40:00+10:00"
-      }
-    ],
-    "companyInfo": [
-      {
-        "id": 80001,
-        "positionId": 1001,
-        "generatedByUser": false,
-        "answeredByHR": true,
-        "subject": "Working hours",
-        "answer": "Core hours 10am–4pm. Flex outside core hours permitted.",
-        "version": 1,
-        "timestamp": "2025-08-24T10:05:00+10:00"
+        "timestamp": "2025-08-24T14:05:00+10:00"
       },
       {
-        "id": 80002,
-        "positionId": 1001,
-        "generatedByUser": false,
-        "answeredByHR": true,
-        "subject": "Benefits",
-        "answer": "L&D stipend $500/quarter, 18 weeks paid parental leave, EAP, home office budget.",
-        "version": 1,
-        "timestamp": "2025-08-24T10:07:00+10:00"
-      },
-      {
-        "id": 80003,
+        "id": 60005,
         "positionId": 1001,
         "generatedByUser": true,
-        "answeredByHR": false,
-        "subject": "Company-wide bonus policy",
-        "answer": null,
+        "answeredByHR": true,
+        "subject": "Salary",
+        "answer": "Unknown at this stage.",
         "version": 1,
-        "timestamp": "2025-08-24T14:22:00+10:00"
+        "timestamp": "2025-08-24T14:05:00+10:00"
       }
     ]
   }

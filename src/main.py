@@ -34,29 +34,7 @@ try:
 
     @app.get("/")
     async def root():
-        return {"message": "Welcome to Position FAQ API. Use /v1/chatRequest endpoint."}
-
-    @app.post("/workflow")
-    async def invoke_workflow(request: Request):
-        log.info("Received workflow request")
-        try:
-            body = await request.json()
-            input_text = body.get("message", "")
-            result = handle_workflow_request(input_text)
-            
-            if result["success"]:
-                return {"response": result["response"]}
-            else:
-                return JSONResponse(
-                    status_code=400 if "validation" in result.get("error", "").lower() else 500,
-                    content={"error": result["error"]}
-                )
-        except Exception as e:
-            log.exception("Unhandled exception in workflow endpoint: %s", str(e))
-            return JSONResponse(
-                status_code=500, 
-                content={"error": "An unexpected error occurred. Please try again later."}
-            )
+        return {"message": "Welcome to Position FAQ API."}
         
     @app.post("/v1/chatRequest")
     async def chat_request(chat_request: ChatRequest):
