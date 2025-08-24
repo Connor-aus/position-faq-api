@@ -12,6 +12,6 @@ log.debug("LLM MODELID: " + MODEL_ID)
 
 llm = ChatAnthropic(
     model=MODEL_ID,
-    temperature=0.5,
+    temperature=0.1,
     top_p=0.7
 )
