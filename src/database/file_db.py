@@ -248,3 +248,48 @@ def save_position_data(data: Dict[str, Any], position_id: Optional[int] = None) 
     except Exception as e:
         log.error(f"Error saving position data: {str(e)}")
         return False, position_id, version
+
+def get_positions_by_company_id(company_id: int) -> List[Dict[str, Any]]:
+    """
+    Retrieve all position data associated with a specific company ID
+    
+    Args:
+        company_id: The company ID to retrieve positions for
+        
+    Returns:
+        List of position data dictionaries
+    """
+    pattern = _get_file_pattern("pos")
+    files = glob.glob(pattern)
+    
+    positions = []
+    
+    for file_path in files:
+        try:
+            with open(file_path, 'r') as file:
+                data = json.load(file)
+                
+                # Check if this position belongs to the specified company
+                if "position" in data and data["position"].get("companyId") == company_id:
+                    # Get the position ID and check if we already have a newer version
+                    position_id = data["position"]["id"]
+                    
+                    # Check if we already have this position in our list
+                    existing_position = next((p for p in positions if p["position"]["id"] == position_id), None)
+                    
+                    if existing_position:
+                        # Compare versions and keep the newer one
+                        if data["position"].get("version", 0) > existing_position["position"].get("version", 0):
+                            # Replace with newer version
+                            positions.remove(existing_position)
+                            positions.append(data)
+                    else:
+                        # Add new position
+                        positions.append(data)
+                        
+        except (json.JSONDecodeError, FileNotFoundError) as e:
+            log.error(f"Error reading position data file {file_path}: {str(e)}")
+            continue
+    
+    log.info(f"Found {len(positions)} positions for company ID: {company_id}")
+    return positions

@@ -2,6 +2,7 @@
     "position": {
       "id": 1001,
       "companyId": 2001,
+      "positionTitle": "Senior Full Stack Engineer (Payments)",
       "positionDescription": "Senior Full Stack Engineer (Payments). Brisbane (Hybrid). Own key features across React + Node/AWS stack. Collaborate with Product and Design. On-call rotation optional.",
       "version": 1,
       "timestamp": "2025-08-24T15:05:00+10:00"

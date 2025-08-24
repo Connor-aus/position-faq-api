@@ -1,6 +1,6 @@
 from src.llms.llm import llm
 from src.utils.logger import log
-from src.utils.data_loader import load_position_data
+from src.database.file_db import get_position_data, get_company_data
 from typing import Dict, Any, Literal, Optional
 import json
 
@@ -125,7 +125,7 @@ def fetch_company_data(input_text: str) -> str:
         log.error(f"Error fetching company data: {str(e)}")
         return "I'm sorry, I couldn't retrieve information about this company at the moment."
 
-def process_question_with_llm(question: str, position_data: Dict[str, Any]) -> str:
+def process_question_with_llm(question: str, position_data: Dict[str, Any], company_data: Dict[str, Any]) -> str:
     """
     Process a question using the LLM with position data.
     
@@ -142,8 +142,10 @@ def process_question_with_llm(question: str, position_data: Dict[str, Any]) -> s
     position_info = position_data.get("position", {})
     position_faqs = position_data.get("positionFAQs", [])
     position_details = position_data.get("positionInfo", [])
-    company_faqs = position_data.get("companyFAQs", [])
-    company_info = position_data.get("companyInfo", [])
+    
+    # Format the company data for the prompt
+    company_faqs = company_data.get("companyFAQs", [])
+    company_info = company_data.get("companyInfo", [])
     
     # Create a formatted string of the data for the prompt
     position_data_str = f"""
@@ -215,15 +217,26 @@ def process_input(input_text: str, position_id: Optional[int] = None) -> Dict[st
             return process_legacy_input(input_text)
             
         # Step 1: Retrieve data for the position
-        position_data = load_position_data(position_id)
+        position_data = get_position_data(position_id)
         if position_data is None:
             return {
                 "success": False,
                 "error": f"Position with ID {position_id} not found"
             }
+        
+        # Step 2: Get the company ID from the position data and retrieve company data
+        company_id = position_data.get("position", {}).get("companyId")
+        if not company_id:
+            log.warning(f"No company ID found in position data for position ID {position_id}")
+            company_data = {"companyFAQs": [], "companyInfo": []}
+        else:
+            company_data = get_company_data(company_id)
+            if company_data is None:
+                log.warning(f"Company data not found for company ID {company_id}")
+                company_data = {"companyFAQs": [], "companyInfo": []}
             
-        # Step 2: Process the question using the LLM
-        response_content = process_question_with_llm(input_text, position_data)
+        # Step 3: Process the question using the LLM with both position and company data
+        response_content = process_question_with_llm(input_text, position_data, company_data)
         
         return {
             "success": True,

@@ -18,6 +18,8 @@ try:
     from src.utils.logger import log
     from src.handlers.workflow_handler import handle_workflow_request
     from src.api.chat_request_model import ChatRequest
+    from src.api.company_request_model import CompanyRequest
+    from src.database.file_db import get_positions_by_company_id
 
     app = FastAPI(title="Position FAQ API")
 
@@ -53,6 +55,26 @@ try:
             log.exception("Unhandled exception in chat request endpoint: %s", str(e))
             return JSONResponse(
                 status_code=500, 
+                content={"error": "An unexpected error occurred. Please try again later."}
+            )
+            
+    @app.get("/v1/company/{company_id}/positions")
+    async def get_company_positions(company_id: int):
+        log.info(f"Received request for positions of company ID: {company_id}")
+        try:
+            positions = get_positions_by_company_id(company_id)
+            
+            if positions:
+                return {"positions": positions}
+            else:
+                return JSONResponse(
+                    status_code=404,
+                    content={"error": f"No positions found for company ID: {company_id}"}
+                )
+        except Exception as e:
+            log.exception("Unhandled exception in company positions endpoint: %s", str(e))
+            return JSONResponse(
+                status_code=500,
                 content={"error": "An unexpected error occurred. Please try again later."}
             )
 
