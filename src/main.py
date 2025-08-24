@@ -20,13 +20,14 @@ try:
     from src.api.chat_request_model import ChatRequest
     from src.api.company_request_model import CompanyRequest
     from src.api.position_request_model import PositionRequest
-    from src.database.file_db import get_positions_by_company_id, get_all_position_versions
+    from src.api.position_details_model import PositionDetailsRequest
+    from src.database.file_db import get_positions_by_company_id, get_all_position_versions, get_position_data, save_position_data
 
     app = FastAPI(
-    title="Position FAQ API",
-    json_encoder=json.JSONEncoder,
-    default_response_class=JSONResponse
-)
+        title="Position FAQ API",
+        json_encoder=json.JSONEncoder,
+        default_response_class=JSONResponse
+    )
 
     # Configure CORS
     origins = ["*"]  # Allow all origins for local development
@@ -127,6 +128,70 @@ try:
                 )
         except Exception as e:
             log.exception("Unhandled exception in position versions endpoint: %s", str(e))
+            return JSONResponse(
+                status_code=500,
+                content={"error": "An unexpected error occurred. Please try again later."},
+                media_type="application/json; charset=utf-8"
+            )
+
+    @app.put("/v1/position/{position_id}/details")
+    async def update_position_details(position_id: int, details: PositionDetailsRequest):
+        log.info(f"Received request to update details for position ID: {position_id}")
+        try:
+            # Get the current position data
+            current_data = get_position_data(position_id)
+            
+            if not current_data:
+                return JSONResponse(
+                    status_code=404,
+                    content={"error": f"Position not found with ID: {position_id}"},
+                    media_type="application/json; charset=utf-8"
+                )
+            
+            # Create a new version with updated data
+            new_data = current_data.copy()
+            
+            # Update position details
+            if details.position:
+                new_data["position"] = details.position
+                # Ensure position ID is preserved
+                new_data["position"]["id"] = position_id
+            
+            # Update FAQs if provided
+            if details.positionFAQs:
+                new_data["positionFAQs"] = details.positionFAQs
+                # Ensure position ID is set for all FAQs
+                for faq in new_data["positionFAQs"]:
+                    faq["positionId"] = position_id
+            
+            # Update position info if provided
+            if details.positionInfo:
+                new_data["positionInfo"] = details.positionInfo
+                # Ensure position ID is set for all info items
+                for info in new_data["positionInfo"]:
+                    info["positionId"] = position_id
+            
+            # Save the updated position data
+            success, saved_id, version = save_position_data(new_data, position_id)
+            
+            if success:
+                return JSONResponse(
+                    status_code=200,
+                    content={
+                        "message": f"Position details updated successfully",
+                        "positionId": saved_id,
+                        "version": version
+                    },
+                    media_type="application/json; charset=utf-8"
+                )
+            else:
+                return JSONResponse(
+                    status_code=500,
+                    content={"error": "Failed to save position details"},
+                    media_type="application/json; charset=utf-8"
+                )
+        except Exception as e:
+            log.exception("Unhandled exception in update position details endpoint: %s", str(e))
             return JSONResponse(
                 status_code=500,
                 content={"error": "An unexpected error occurred. Please try again later."},

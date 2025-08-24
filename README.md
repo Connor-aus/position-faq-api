@@ -59,12 +59,55 @@ The API will be available at `http://localhost:8000`
 
 ## API Usage
 
-Send a POST request to the `/workflow` endpoint:
+### Chat Request
+
+Send a POST request to the `/v1/chatRequest` endpoint:
 
 ```bash
-curl -X POST http://localhost:8000/workflow \
+curl -X POST http://localhost:8000/v1/chatRequest \
   -H "Content-Type: application/json" \
-  -d '{"message": "What are the responsibilities of a Software Engineer position?"}'
+  -d '{"question": "What are the responsibilities of this position?", "positionId": 1001}'
+```
+
+### Get Company Positions
+
+Get all positions for a specific company:
+
+```bash
+curl -X GET http://localhost:8000/v1/company/2001/positions
+```
+
+### Get Position Versions
+
+Get all versions of a specific position:
+
+```bash
+curl -X GET http://localhost:8000/v1/position/1001/versions
+```
+
+### Update Position Details
+
+Update details for a specific position (creates a new version):
+
+```bash
+curl -X PUT http://localhost:8000/v1/position/1001/details \
+  -H "Content-Type: application/json" \
+  -d '{
+    "position": {
+      "id": 1001,
+      "companyId": 2001,
+      "positionTitle": "Updated Position Title",
+      "positionDescription": "Updated description"
+    },
+    "positionFAQs": [
+      {
+        "id": 50001,
+        "positionId": 1001,
+        "question": "Is this role hybrid?",
+        "response": "Yes, 2 days in office per week"
+      }
+    ]
+  }'
 ```
 
 ## Project Structure

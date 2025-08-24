@@ -225,6 +225,8 @@ def save_position_data(data: Dict[str, Any], position_id: Optional[int] = None) 
     # Ensure position ID is set in the data
     if "position" in data:
         data["position"]["id"] = position_id
+        # Set the version in the position data
+        data["position"]["version"] = version
     
     if "positionInfo" in data:
         for item in data["positionInfo"]:
