@@ -125,6 +125,90 @@ def fetch_company_data(input_text: str) -> str:
         log.error(f"Error fetching company data: {str(e)}")
         return "I'm sorry, I couldn't retrieve information about this company at the moment."
 
+def summarize_question(question: str) -> str:
+    """
+    Summarize a question to make it more general for FAQ storage.
+    
+    Args:
+        question: The original question from the user
+        
+    Returns:
+        A summarized version of the question
+    """
+    log.info("Summarizing question for FAQ storage")
+    
+    prompt = f"""
+    Summarize the following question to make it more general and suitable for an FAQ:
+    
+    Original question: "{question}"
+    
+    Your summary should:
+    1. Maintain the core intent of the question
+    2. Remove any personal details or specifics that wouldn't apply to other users
+    3. Be concise and clear
+    4. End with a question mark
+    5. Be in the form of a question someone might ask about a job position
+    
+    Return ONLY the summarized question, without any explanation or additional text.
+    """
+    
+    try:
+        response = llm.invoke(prompt)
+        return response.content.strip()
+    except Exception as e:
+        log.error(f"Error summarizing question: {str(e)}")
+        # If summarization fails, return the original question
+        return question
+
+def add_question_to_faqs(question: str, position_data: Dict[str, Any], position_id: int) -> Dict[str, Any]:
+    """
+    Add an unanswered question to the position FAQs.
+    
+    Args:
+        question: The question to add
+        position_data: The position data to update
+        position_id: The ID of the position
+        
+    Returns:
+        Updated position data with the new FAQ added
+    """
+    log.info(f"Adding unanswered question to FAQs for position ID {position_id}")
+    
+    # Summarize the question
+    summarized_question = summarize_question(question)
+    
+    # Get existing FAQs
+    position_faqs = position_data.get("positionFAQs", [])
+    
+    # Generate a new unique ID
+    # Find the highest existing FAQ ID and increment by 1
+    next_id = 50001  # Default starting ID
+    for faq in position_faqs:
+        if faq.get("id", 0) >= next_id:
+            next_id = faq.get("id", 0) + 1
+    
+    # Create the new FAQ entry
+    import datetime
+    current_time = datetime.datetime.now().isoformat()
+    
+    new_faq = {
+        "id": next_id,
+        "positionId": position_id,
+        "generatedByUser": True,
+        "answeredByHR": False,
+        "timesAsked": 1,
+        "question": summarized_question,
+        "response": None,
+        "version": 1,
+        "timestamp": current_time
+    }
+    
+    # Add to position FAQs
+    position_faqs.append(new_faq)
+    position_data["positionFAQs"] = position_faqs
+    
+    return position_data
+
 def process_question_with_llm(question: str, position_data: Dict[str, Any], company_data: Dict[str, Any]) -> str:
     """
     Process a question using the LLM with position data.
@@ -132,6 +216,7 @@ def process_question_with_llm(question: str, position_data: Dict[str, Any], comp
     Args:
         question: The question from the user
         position_data: The position data from the database
+        company_data: The company data from the database
         
     Returns:
         The response from the LLM
@@ -212,9 +297,12 @@ def process_input(input_text: str, position_id: Optional[int] = None) -> Dict[st
     log.info(f"Processing input for position ID {position_id}: {input_text}")
     
     try:
-        # If no position ID is provided, use the old workflow
+        # If no position ID is provided, return an error
         if position_id is None:
-            return process_legacy_input(input_text)
+            return {
+                "success": False,
+                "error": "Position ID is required"
+            }
             
         # Step 1: Retrieve data for the position
         position_data = get_position_data(position_id)
@@ -237,6 +325,18 @@ def process_input(input_text: str, position_id: Optional[int] = None) -> Dict[st
             
         # Step 3: Process the question using the LLM with both position and company data
         response_content = process_question_with_llm(input_text, position_data, company_data)
+        
+        # Step 4: Check if the response indicates the question was unanswerable
+        if "This question has been added to the question list for the Hiring Manager" in response_content:
+            # Add the question to the position FAQs
+            updated_position_data = add_question_to_faqs(input_text, position_data, position_id)
+            
+            # Save the updated position data
+            from src.database.file_db import save_position_data
+            success, _, _ = save_position_data(updated_position_data, position_id)
+            
+            if not success:
+                log.warning(f"Failed to save updated position data for position ID {position_id}")
         
         return {
             "success": True,
