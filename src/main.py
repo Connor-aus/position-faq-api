@@ -22,7 +22,11 @@ try:
     from src.api.position_request_model import PositionRequest
     from src.database.file_db import get_positions_by_company_id, get_all_position_versions
 
-    app = FastAPI(title="Position FAQ API")
+    app = FastAPI(
+    title="Position FAQ API",
+    json_encoder=json.JSONEncoder,
+    default_response_class=JSONResponse
+)
 
     # Configure CORS
     origins = ["*"]  # Allow all origins for local development
@@ -34,10 +38,22 @@ try:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    
+    # Add middleware to ensure proper JSON encoding
+    @app.middleware("http")
+    async def ensure_proper_encoding(request: Request, call_next):
+        response = await call_next(request)
+        if isinstance(response, JSONResponse):
+            response.headers["Content-Type"] = "application/json; charset=utf-8"
+        return response
 
     @app.get("/")
     async def root():
-        return {"message": "Welcome to Position FAQ API."}
+        return JSONResponse(
+            status_code=200,
+            content={"message": "Welcome to Position FAQ API."},
+            media_type="application/json; charset=utf-8"
+        )
         
     @app.post("/v1/chatRequest")
     async def chat_request(chat_request: ChatRequest):
@@ -46,17 +62,23 @@ try:
             result = handle_workflow_request(chat_request.question, chat_request.positionId)
             
             if result["success"]:
-                return {"response": result["response"]}
+                return JSONResponse(
+                    status_code=200,
+                    content={"response": result["response"]},
+                    media_type="application/json; charset=utf-8"
+                )
             else:
                 return JSONResponse(
                     status_code=400 if "validation" in result.get("error", "").lower() else 500,
-                    content={"error": result["error"]}
+                    content={"error": result["error"]},
+                    media_type="application/json; charset=utf-8"
                 )
         except Exception as e:
             log.exception("Unhandled exception in chat request endpoint: %s", str(e))
             return JSONResponse(
                 status_code=500, 
-                content={"error": "An unexpected error occurred. Please try again later."}
+                content={"error": "An unexpected error occurred. Please try again later."},
+                media_type="application/json; charset=utf-8"
             )
             
     @app.get("/v1/company/{company_id}/positions")
@@ -66,17 +88,23 @@ try:
             positions = get_positions_by_company_id(company_id)
             
             if positions:
-                return {"positions": positions}
+                return JSONResponse(
+                    status_code=200,
+                    content={"positions": positions},
+                    media_type="application/json; charset=utf-8"
+                )
             else:
                 return JSONResponse(
                     status_code=404,
-                    content={"error": f"No positions found for company ID: {company_id}"}
+                    content={"error": f"No positions found for company ID: {company_id}"},
+                    media_type="application/json; charset=utf-8"
                 )
         except Exception as e:
             log.exception("Unhandled exception in company positions endpoint: %s", str(e))
             return JSONResponse(
                 status_code=500,
-                content={"error": "An unexpected error occurred. Please try again later."}
+                content={"error": "An unexpected error occurred. Please try again later."},
+                media_type="application/json; charset=utf-8"
             )
             
     @app.get("/v1/position/{position_id}/versions")
@@ -86,17 +114,23 @@ try:
             versions = get_all_position_versions(position_id)
             
             if versions:
-                return {"versions": versions}
+                return JSONResponse(
+                    status_code=200,
+                    content={"versions": versions},
+                    media_type="application/json; charset=utf-8"
+                )
             else:
                 return JSONResponse(
                     status_code=404,
-                    content={"error": f"No versions found for position ID: {position_id}"}
+                    content={"error": f"No versions found for position ID: {position_id}"},
+                    media_type="application/json; charset=utf-8"
                 )
         except Exception as e:
             log.exception("Unhandled exception in position versions endpoint: %s", str(e))
             return JSONResponse(
                 status_code=500,
-                content={"error": "An unexpected error occurred. Please try again later."}
+                content={"error": "An unexpected error occurred. Please try again later."},
+                media_type="application/json; charset=utf-8"
             )
 
 except Exception as e:
