@@ -17,7 +17,6 @@ load_dotenv()
 try:
     from src.utils.logger import log
     from src.handlers.workflow_handler import handle_workflow_request
-    from src.handlers.contact_handler import handle_contact_request
 
     app = FastAPI(title="Position FAQ API")
 
@@ -53,23 +52,6 @@ try:
                 )
         except Exception as e:
             log.exception("Unhandled exception in workflow endpoint: %s", str(e))
-            return JSONResponse(
-                status_code=500, 
-                content={"error": "An unexpected error occurred. Please try again later."}
-            )
-
-    @app.post("/contact")
-    async def contact_form(request: Request):
-        log.info("Received contact form request")
-        try:
-            body = await request.json()
-            result = handle_contact_request(body)
-            return JSONResponse(
-                status_code=result["statusCode"],
-                content=result["body"]
-            )
-        except Exception as e:
-            log.exception("Unhandled exception in contact endpoint: %s", str(e))
             return JSONResponse(
                 status_code=500, 
                 content={"error": "An unexpected error occurred. Please try again later."}
