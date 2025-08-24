@@ -19,7 +19,8 @@ try:
     from src.handlers.workflow_handler import handle_workflow_request
     from src.api.chat_request_model import ChatRequest
     from src.api.company_request_model import CompanyRequest
-    from src.database.file_db import get_positions_by_company_id
+    from src.api.position_request_model import PositionRequest
+    from src.database.file_db import get_positions_by_company_id, get_all_position_versions
 
     app = FastAPI(title="Position FAQ API")
 
@@ -73,6 +74,26 @@ try:
                 )
         except Exception as e:
             log.exception("Unhandled exception in company positions endpoint: %s", str(e))
+            return JSONResponse(
+                status_code=500,
+                content={"error": "An unexpected error occurred. Please try again later."}
+            )
+            
+    @app.get("/v1/position/{position_id}/versions")
+    async def get_position_versions(position_id: int):
+        log.info(f"Received request for all versions of position ID: {position_id}")
+        try:
+            versions = get_all_position_versions(position_id)
+            
+            if versions:
+                return {"versions": versions}
+            else:
+                return JSONResponse(
+                    status_code=404,
+                    content={"error": f"No versions found for position ID: {position_id}"}
+                )
+        except Exception as e:
+            log.exception("Unhandled exception in position versions endpoint: %s", str(e))
             return JSONResponse(
                 status_code=500,
                 content={"error": "An unexpected error occurred. Please try again later."}

@@ -293,3 +293,44 @@ def get_positions_by_company_id(company_id: int) -> List[Dict[str, Any]]:
     
     log.info(f"Found {len(positions)} positions for company ID: {company_id}")
     return positions
+
+def get_all_position_versions(position_id: int) -> List[Dict[str, Any]]:
+    """
+    Retrieve all versions of position data for the specified ID
+    
+    Args:
+        position_id: The position ID to retrieve all versions for
+        
+    Returns:
+        List of position data dictionaries, sorted by version (newest first)
+    """
+    pattern = _get_file_pattern("pos", position_id)
+    files = glob.glob(pattern)
+    
+    if not files:
+        log.warning(f"No position files found for ID: {position_id}")
+        return []
+    
+    versions = []
+    
+    for file_path in files:
+        try:
+            with open(file_path, 'r') as file:
+                data = json.load(file)
+                # Add the file path to the data for reference
+                data["_file_path"] = file_path
+                versions.append(data)
+        except (json.JSONDecodeError, FileNotFoundError) as e:
+            log.error(f"Error reading position data file {file_path}: {str(e)}")
+            continue
+    
+    # Sort by version (descending)
+    versions.sort(key=lambda x: x["position"].get("version", 0), reverse=True)
+    
+    # Remove the file path reference before returning
+    for version in versions:
+        if "_file_path" in version:
+            del version["_file_path"]
+    
+    log.info(f"Found {len(versions)} versions for position ID: {position_id}")
+    return versions
