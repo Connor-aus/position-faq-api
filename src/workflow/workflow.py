@@ -3,6 +3,8 @@ from src.utils.logger import log
 from src.database.file_db import get_position_data, get_company_data
 from typing import Dict, Any, Literal, Optional
 import json
+import re
+import datetime
 
 def identify_question_type(input_text: str) -> Dict[str, Any]:
     """
@@ -160,6 +162,40 @@ def summarize_question(question: str) -> str:
         # If summarization fails, return the original question
         return question
 
+def increment_faq_times_asked(position_data: Dict[str, Any], faq_id: int) -> Dict[str, Any]:
+    """
+    Increment the timesAsked counter for an existing FAQ.
+    
+    Args:
+        position_data: The position data to update
+        faq_id: The ID of the FAQ to update
+        
+    Returns:
+        Updated position data with incremented timesAsked
+    """
+    log.info(f"Incrementing timesAsked for FAQ ID {faq_id}")
+    
+    # Get existing FAQs
+    position_faqs = position_data.get("positionFAQs", [])
+    
+    # Find the FAQ with the matching ID
+    for faq in position_faqs:
+        if faq.get("id") == faq_id:
+            # Increment the timesAsked counter
+            current_times_asked = faq.get("timesAsked", 0)
+            faq["timesAsked"] = current_times_asked + 1
+            
+            # Update the timestamp
+            faq["timestamp"] = datetime.datetime.now().isoformat()
+            
+            log.info(f"Incremented timesAsked for FAQ ID {faq_id} to {faq['timesAsked']}")
+            break
+    
+    # Update the position data
+    position_data["positionFAQs"] = position_faqs
+    
+    return position_data
+
 def add_question_to_faqs(question: str, position_data: Dict[str, Any], position_id: int) -> Dict[str, Any]:
     """
     Add an unanswered question to the position FAQs.
@@ -188,7 +224,6 @@ def add_question_to_faqs(question: str, position_data: Dict[str, Any], position_
             next_id = faq.get("id", 0) + 1
     
     # Create the new FAQ entry
-    import datetime
     current_time = datetime.datetime.now().isoformat()
     
     new_faq = {
@@ -265,23 +300,55 @@ def process_question_with_llm(question: str, position_data: Dict[str, Any], comp
     
     2. Identify if the question is about the company or the position.
     
-    3. Use the position or company information provided above to answer the question, or state that there is no answer available in the provided information.
+    3. Check if the question is similar to any existing FAQ in the position FAQs. If it is, note the ID of the most similar FAQ.
     
-    4. If there is no answer to the question within the provided information, but the question is very similar to one of the FAQs that has "response": null and "generatedByUser": true, then respond with: "This question has been passed to the hiring manager."
+    4. Use the position or company information provided above to answer the question, or state that there is no answer available in the provided information.
     
-    5. If there is no answer to the question within the provided information and the question is not very similar to any existing FAQ question, respond with: "This question has been added to the question list for the Hiring Manager."
+    5. Return your response in JSON format with the following structure:
+       {{
+         "similar_question_id": null or the ID of the most similar question found,
+         "response": "Your answer to the user's question or appropriate message"
+       }}
     
-    6. If there is an answer to the question within the provided information, provide an appropriate and concise answer.
+    If there is a similar question with an answer, provide that answer in the response field.
+    If there is a similar question without an answer (response: null), set the response to: "This question has been passed to the hiring manager."
+    If there is no similar question and no answer available, set the response to: "This question has been added to the question list for the Hiring Manager."
+    If there is an answer available in the provided information but no similar question, provide that answer in the response field and set similar_question_id to null.
     
-    Respond with ONLY the final answer, without explaining your reasoning or listing the steps you followed.
+    Return ONLY the JSON object described above, without any additional text or explanation.
     """
     
     try:
         response = llm.invoke(prompt)
-        return response.content.strip()
+        response_text = response.content.strip()
+        
+        # Parse the JSON response
+        try:
+            # Find JSON pattern in the response
+            json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
+            if json_match:
+                json_str = json_match.group(0)
+                result = json.loads(json_str)
+                log.info(f"Parsed LLM response: {result}")
+                return result
+            else:
+                log.error("Failed to parse JSON from LLM response")
+                return {
+                    "similar_question_id": None,
+                    "response": "I'm sorry, I couldn't process your question at the moment. Please try again later."
+                }
+        except json.JSONDecodeError as je:
+            log.error(f"JSON decode error: {str(je)}")
+            return {
+                "similar_question_id": None,
+                "response": response_text  # Return the raw response as fallback
+            }
     except Exception as e:
         log.error(f"Error processing question with LLM: {str(e)}")
-        return "I'm sorry, I couldn't process your question at the moment. Please try again later."
+        return {
+            "similar_question_id": None,
+            "response": "I'm sorry, I couldn't process your question at the moment. Please try again later."
+        }
 
 def process_input(input_text: str, position_id: Optional[int] = None) -> Dict[str, Any]:
     """
@@ -324,15 +391,31 @@ def process_input(input_text: str, position_id: Optional[int] = None) -> Dict[st
                 company_data = {"companyFAQs": [], "companyInfo": []}
             
         # Step 3: Process the question using the LLM with both position and company data
-        response_content = process_question_with_llm(input_text, position_data, company_data)
+        llm_result = process_question_with_llm(input_text, position_data, company_data)
         
-        # Step 4: Check if the response indicates the question was unanswerable
-        if "This question has been added to the question list for the Hiring Manager" in response_content:
-            # Add the question to the position FAQs
+        # Extract the response content and similar question ID
+        response_content = llm_result.get("response", "I'm sorry, I couldn't process your question at the moment.")
+        similar_question_id = llm_result.get("similar_question_id")
+        
+        # Step 4: Handle the response based on whether a similar question was found
+        from src.database.file_db import save_position_data
+        
+        if similar_question_id is not None:
+            # A similar question was found, increment the timesAsked counter
+            log.info(f"Similar question found with ID: {similar_question_id}")
+            updated_position_data = increment_faq_times_asked(position_data, similar_question_id)
+            
+            # Save the updated position data
+            success, _, _ = save_position_data(updated_position_data, position_id)
+            
+            if not success:
+                log.warning(f"Failed to save updated position data for position ID {position_id}")
+        elif "This question has been added to the question list for the Hiring Manager" in response_content:
+            # No similar question was found and the question couldn't be answered
+            log.info("No similar question found, adding new question to FAQs")
             updated_position_data = add_question_to_faqs(input_text, position_data, position_id)
             
             # Save the updated position data
-            from src.database.file_db import save_position_data
             success, _, _ = save_position_data(updated_position_data, position_id)
             
             if not success:
